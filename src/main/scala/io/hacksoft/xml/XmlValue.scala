@@ -44,4 +44,4 @@ object XmlAttribute {
 }
 
 // TODO: finish
-case class Namespace(url: java.net.URL)
+case class Namespace(uri: String)
