@@ -1,5 +1,7 @@
 package io.hacksoft.xml
 
+import scala.annotation.tailrec
+
 trait XmlValue
 
 case class XmlObject(
@@ -10,21 +12,66 @@ case class XmlObject(
   minimiseEmpty: Boolean = false
 ) extends XmlValue {
 
-  override def toString: String = render
-
-  private def render: String = {
+  private def constructAttributesString: String = {
     val attributesEmptySpace = if(attributes.isEmpty) "" else " "
     val attributesString = attributes.mkString(" ")
-    // If there is a literal with a literal after it - there should be an empty space between them
-    val childrenString = children.foldLeft("") {
+    attributesEmptySpace + attributesString
+  }
+
+  /**
+    * Recursive calling XmlValue.toString to render complex children
+    * If there is a literal with a literal after it - there should be
+    * an empty space between them
+    */
+  private def constructChildrenString: String =
+    children.foldLeft("") {
       case (res, x) if res.endsWith(">") || res == "" => res + x.toString
       case (res, x: XmlLiteral) => res + " " + x.toString
       case (res, x) => res + x.toString
     }
 
-    if (minimiseEmpty && children.isEmpty) s"<$label$attributesEmptySpace$attributesString/>"
-    else s"<$label$attributesEmptySpace$attributesString>$childrenString</$label>"
+  /**
+    * TODO: Recursively find all the namespaces and decide which ones should be in the current layer
+    */
+  private def constructNamespacesString: String = {
+    def allNamespaces(ns: Option[Namespace]): List[Namespace] = {
+      // Get recursive parent namespaces
+      @tailrec
+      def iter(ns: Option[Namespace], res: List[Namespace]): List[Namespace] = ns match {
+        case None => res
+        case Some(namespace) => iter(namespace.parent, namespace :: res)
+      }
+      // Add all namespaces from attributes
+      val attributesNamespaces = attributes.collect{case XmlAttribute(_, _, Some(ns)) => ns}.toList
+
+      def distinctNamespaces(l: List[Namespace]): List[Namespace] =
+        l.groupBy(x => (x.uri, x.prefix)).map(_._2.head).toList
+
+      distinctNamespaces((iter(ns, Nil) ++ attributesNamespaces))
+    }
+
+    val allNs = allNamespaces(namespace).filter(_.visibleInNode)
+    val leadingWhitespace = if(allNs.isEmpty) "" else " "
+
+    val namespacesString = allNs.map{
+      case Namespace(uri, Some(prefix), _, _) => s"""xmlns:$prefix="$uri""""
+      case Namespace(uri, None, _, _) => s"""xmlns="$uri""""
+    }.mkString(" ")
+
+    leadingWhitespace + namespacesString
   }
+
+  private def render: String = {
+    val attributesString = constructAttributesString
+    val childrenString = constructChildrenString
+    val namespacesString = constructNamespacesString
+    val prefix = namespace.flatMap(x => x.prefix.map(y => y + ":")).getOrElse("")
+
+    if (minimiseEmpty && children.isEmpty) s"<$prefix$label$attributesString$namespacesString/>"
+    else s"<$prefix$label$attributesString$namespacesString>$childrenString</$prefix$label>"
+  }
+
+  override def toString: String = render
 }
 
 case class XmlLiteral(value: String) extends XmlValue {
@@ -36,12 +83,14 @@ case class XmlAttribute(
   value: String,
   namespace: Option[Namespace] = None
 ) {
-  override def toString: String = s"""$label="$value""""
+  override def toString: String = namespace match {
+    case Some(Namespace(_, Some(prefix), _, _)) => s"""$prefix:$label="$value""""
+    case _ => s"""$label="$value""""
+  }
 }
 object XmlAttribute {
   def fromMap(m: Map[String, String]): Seq[XmlAttribute] =
     m.map{case (x,y) => XmlAttribute(x,y)}.toSeq
 }
 
-// TODO: finish
-case class Namespace(uri: String)
+case class Namespace(uri: String, prefix: Option[String] = None, parent: Option[Namespace] = None, visibleInNode: Boolean = true)
