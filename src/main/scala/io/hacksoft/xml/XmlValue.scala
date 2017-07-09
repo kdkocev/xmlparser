@@ -4,7 +4,7 @@ import scala.annotation.{implicitNotFound, tailrec}
 
 @implicitNotFound("Cannot find implicit for {T} try defining XmlFormat")
 trait XmlValue {
-  def to[T](implicit r: XmlReads[T]): T = r.reads(this)
+  def as[T](implicit r: XmlReads[T]): XmlResult[T] = r.reads(this)
   def \(name: String): Seq[XmlValue]
   def \! (name: String): XmlValue
   def \!? (name: String): Option[XmlValue]

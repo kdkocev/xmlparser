@@ -582,8 +582,8 @@ class XmlValueSpec extends Specification {
       (xmlValue \@ "bar") must throwA[NoSuchElementException]
     }
 
-    "basic to[Int]" in {
-      XmlLiteral("12").to[Int] mustEqual 12
+    "basic .as[Int]" in {
+      XmlLiteral("12").as[Int] mustEqual XmlSuccess(12)
     }
 
     // TODO: add a test for attributes with same name but different namespaces \@
