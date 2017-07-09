@@ -1,8 +1,16 @@
 package io.hacksoft.xml
 
-import scala.annotation.tailrec
+import scala.annotation.{implicitNotFound, tailrec}
 
-trait XmlValue
+@implicitNotFound("Cannot find implicit for {T} try defining XmlFormat")
+trait XmlValue {
+  def to[T](implicit r: XmlReads[T]): T = r.reads(this)
+  def \(name: String): Seq[XmlValue]
+  def \! (name: String): XmlValue
+  def \!? (name: String): Option[XmlValue]
+  def \@ (name: String): XmlAttribute
+  def \@? (name: String): Option[XmlAttribute]
+}
 
 case class XmlObject(
   label: String,
@@ -11,6 +19,35 @@ case class XmlObject(
   namespace: Option[Namespace] = None,
   minimiseEmpty: Boolean = false
 ) extends XmlValue {
+
+  override def \ (name: String): Seq[XmlValue] = children.filter{
+    case x: XmlObject if x.label == name => true
+    case _ => false
+  }
+
+  override def \! (name: String): XmlValue = (this \ name) match {
+    case List(el) => el
+    case Nil => throw new NoSuchElementException
+    case _ => throw new RuntimeException(s"More than one element with name $name found")
+  }
+
+  override def \!? (name: String): Option[XmlValue] = (this \ name) match {
+    case List(el) => Some(el)
+    case Nil => None
+    case _ => throw new RuntimeException(s"More than one element with name $name found")
+  }
+
+  override def \@ (name: String): XmlAttribute = attributes.filter(x => x.label == name) match {
+    case List(x) => x
+    case Nil => throw new NoSuchElementException
+    case _ => throw new RuntimeException("Attributes should have different names")
+  }
+
+  override def \@? (name: String): Option[XmlAttribute] = attributes.filter(x => x.label == name) match {
+    case List(x) => Some(x)
+    case Nil => None
+    case _ => throw new RuntimeException("Attributes should have different names")
+  }
 
   private def constructAttributesString: String = {
     val attributesEmptySpace = if(attributes.isEmpty) "" else " "
@@ -76,6 +113,11 @@ case class XmlObject(
 
 case class XmlLiteral(value: String) extends XmlValue {
   override def toString: String = value
+  override def \(name: String): Seq[XmlValue] = throw new RuntimeException("""\ on XmlLiteral""")
+  override def \!(name: String): XmlValue = throw new RuntimeException("""\! on XmlLiteral""")
+  override def \!? (name: String): Option[XmlValue] = throw new RuntimeException("""\!? on XmlLiteral""")
+  override def \@(name: String): XmlAttribute = throw new RuntimeException("""\@ on XmlLiteral""")
+  override def \@?(name: String): Option[XmlAttribute] = throw new RuntimeException("""\@? on XmlLiteral""")
 }
 
 case class XmlAttribute(

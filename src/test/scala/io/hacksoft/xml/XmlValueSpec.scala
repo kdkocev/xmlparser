@@ -471,4 +471,121 @@ class XmlValueSpec extends Specification {
       Utility.trim(xmlElem).toString mustEqual xmlValue.toString
     }
   }
+
+  "XmlValue methods" should {
+    """\ (name) fetches List of children""" in {
+      val xmlValue1 = XmlObject("foo", children = Seq(
+        XmlObject("bar1", minimiseEmpty = true),
+        XmlObject("bar2")
+      ))
+
+      (xmlValue1 \ "bar1") mustEqual List(XmlObject("bar1", minimiseEmpty = true))
+      (xmlValue1 \ "bar2") mustEqual List(XmlObject("bar2"))
+      (xmlValue1 \ "bar3") mustEqual List()
+
+      val xmlValue2 = XmlObject("foo", children = Seq(
+        XmlObject("bar"),
+        XmlObject("bar"),
+        XmlObject("bar"),
+        XmlObject("bar1"),
+        XmlObject("bar2")
+      ))
+
+      (xmlValue2 \ "bar") mustEqual List(XmlObject("bar"),XmlObject("bar"),XmlObject("bar"))
+    }
+
+    """\! (name) - fetches one child""" in {
+      val xmlValue = XmlObject("foo", children = Seq(
+        XmlObject("bar1", minimiseEmpty = true),
+        XmlObject("bar2")
+      ))
+
+      (xmlValue \! "bar1") mustEqual XmlObject("bar1", minimiseEmpty = true)
+    }
+
+    """\! (name) - fetches ONLY one child""" in {
+      val xmlValue = XmlObject("foo", children = Seq(
+        XmlObject("bar"),
+        XmlObject("bar"),
+        XmlObject("bar"),
+        XmlObject("bar1"),
+        XmlObject("bar2")
+      ))
+
+      (xmlValue \! "bar") must throwA[RuntimeException]
+    }
+
+    """\!? (name) - fetches Option of child""" in {
+      val xmlValue = XmlObject("foo", children = Seq(
+        XmlObject("bar1", minimiseEmpty = true),
+        XmlObject("bar2")
+      ))
+
+      (xmlValue \!? "bar1") must beSome(XmlObject("bar1", minimiseEmpty = true))
+      (xmlValue \!? "bar3") must beNone
+    }
+
+    """\@ (name) - fetches attribute""" in {
+      val xmlValue = XmlObject("foo",
+        children = Seq(XmlObject("bar", children = Seq(XmlLiteral("text")))),
+        attributes = Seq(XmlAttribute("bar", "text"))
+      )
+      (xmlValue \@ "bar") mustEqual XmlAttribute("bar", "text")
+    }
+
+    """\@? (name) - fetches Option of attribute""" in {
+      val xmlValue = XmlObject("foo",
+        children = Seq(XmlObject("bar", children = Seq(XmlLiteral("text")))),
+        attributes = Seq(XmlAttribute("bar", "text"))
+      )
+      (xmlValue \@? "bar") must beSome(XmlAttribute("bar", "text"))
+      (xmlValue \@? "baz") must beNone
+    }
+
+    """\ throws exception on literals""" in {
+      (XmlLiteral("test") \ "something") must throwA[RuntimeException]
+    }
+
+    """\! throws exception on literals""" in {
+      (XmlLiteral("test") \! "something") must throwA[RuntimeException]
+    }
+
+    """\!? throws exception on literals""" in {
+      (XmlLiteral("test") \!? "something") must throwA[RuntimeException]
+    }
+
+    """\@ throws exception on literals""" in {
+      (XmlLiteral("test") \@ "something") must throwA[RuntimeException]
+    }
+
+    """\@? throws exception on literals""" in {
+      (XmlLiteral("test") \@? "something") must throwA[RuntimeException]
+    }
+
+    """\!? throws exception on more than one element""" in {
+      val xmlValue = XmlObject("foo", children = Seq(
+        XmlObject("bar"),
+        XmlObject("bar"),
+        XmlObject("bar"),
+        XmlObject("bar1"),
+        XmlObject("bar2")
+      ))
+
+      (xmlValue \!? "bar") must throwA[RuntimeException]
+    }
+
+    """\@ throws exception when no attribute found""" in {
+      val xmlValue = XmlObject("foo", children = Seq(
+        XmlObject("bar"),
+        XmlObject("bar")
+      ))
+      (xmlValue \@ "bar") must throwA[NoSuchElementException]
+    }
+
+    "basic to[Int]" in {
+      XmlLiteral("12").to[Int] mustEqual 12
+    }
+
+    // TODO: add a test for attributes with same name but different namespaces \@
+  }
 }
