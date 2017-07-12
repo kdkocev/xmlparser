@@ -21,7 +21,7 @@ class XmlReadsSpec extends Specification {
       XmlLiteral("test").as[Boolean] must throwA[IllegalArgumentException]
     }
 
-    "read List[T]" in {
+    "read List[String]" in {
       val xmlValue = XmlObject("foo", children = Seq(
         XmlLiteral("bar"),
         XmlLiteral("bar"),
@@ -34,6 +34,44 @@ class XmlReadsSpec extends Specification {
       ))
 
       XmlObject("test").as[List[String]] mustEqual XmlSuccess(Nil)
+    }
+
+    "read List[T]" in {
+      val xmlValue = XmlObject("foo", children = Seq(
+        XmlObject("bar", children = Seq(XmlLiteral("baz"))),
+        XmlObject("bar", children = Seq(XmlLiteral("baz"))),
+        XmlObject("bar", children = Seq(XmlLiteral("baz")))
+      ))
+
+      case class Bar(baz: String)
+
+      implicit val f: XmlReads[Bar] = XmlReads[Bar] {
+        case XmlObject("bar", Seq(XmlLiteral(x)), _, _, _) => XmlSuccess(Bar(x))
+        case _ => XmlError("Cannot be parsed to a Bar")
+      }
+
+      xmlValue.as[List[Bar]] mustEqual XmlSuccess(List(
+        Bar("baz"),
+        Bar("baz"),
+        Bar("baz")
+      ))
+    }
+
+    "reading List[T] throws correct error" in {
+      val xmlValue = XmlObject("foo", children = Seq(
+        XmlObject("bar", children = Seq(XmlLiteral("baz"))),
+        XmlObject("badasd", children = Seq(XmlLiteral("baz"))),
+        XmlObject("bar", children = Seq(XmlLiteral("baz")))
+      ))
+
+      case class Bar(baz: String)
+
+      implicit val f: XmlReads[Bar] = XmlReads[Bar] {
+        case XmlObject("bar", Seq(XmlLiteral(x)), _, _, _) => XmlSuccess(Bar(x))
+        case _ => XmlError("Cannot be parsed to a Bar")
+      }
+
+      xmlValue.as[List[Bar]] must throwA[RuntimeException]
     }
 
   }

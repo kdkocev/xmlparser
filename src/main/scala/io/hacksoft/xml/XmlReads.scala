@@ -34,24 +34,10 @@ object XmlReads {
       x.children.map {
         c => r.reads(c) match {
           case XmlSuccess(v) => builder += v
-          case e: XmlError => throw new RuntimeException("Error while parsing xml to object")
+          case e: XmlError => throw new RuntimeException("Error while parsing xml to object " + e)
         }
       }
       XmlSuccess(builder.result())
     case _ => XmlError("Cannot read element into a list")
   }
-
-//  implicit def traversableReads[F[_], A]
-  // (implicit bf: collection.generic.CanBuildFrom[F[_], A, F[A]], ra: JsReads[A])
-  // : JsReads[F[A]] = JsArrayReads.flatResult { jsArray =>
-//  val builder = bf()
-//  builder.sizeHint(jsArray.value)
-//  val (errors, _) = jsArray.value.foldLeft[(Errors, Int)](Vector.empty -> 0) { case ((err, idx), js) => ra.reads(js) match {
-//    case JsError(e) => (err ++ locate(e, JsPath(idx)), idx + 1)
-//    case JsSuccess(a, _) =>
-//      builder += a
-//      (err, idx + 1)
-//  }}
-//  if(errors.isEmpty) JsSuccess(builder.result()) else JsError(errors)
-//}
 }
