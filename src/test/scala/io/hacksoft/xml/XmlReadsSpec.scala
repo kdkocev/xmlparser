@@ -99,7 +99,8 @@ class XmlReadsSpec extends Specification {
     "read Option[T] in complex object" in {
       case class User(id: Option[Int], name: String)
       object User {
-        implicit val reads: XmlReads[User] = x => XmlSuccess(User(x.as[Option[Int]].get, x.as[String].get))
+        implicit val reads: XmlReads[User] = x =>
+          XmlSuccess(User((x \!? "id").flatMap(_.as[Option[Int]].get), (x \! "name").as[String].get))
       }
 
       XmlObject("user", Seq(
