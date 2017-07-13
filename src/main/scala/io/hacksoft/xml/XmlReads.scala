@@ -45,4 +45,13 @@ object XmlReads {
       XmlSuccess(builder.result())
     case _ => XmlError("Cannot read element into a list")
   }
+
+  // TODO: This implementation poses an inconsistency that if we parse Option[T] and the element is there but cannot
+  // be parsed to T we return XmlSuccess instead of XmlError.
+  // This method should return XmlSccess if the element is present or is not present and XmlError if the element is present but cannot
+  // be parsed to the requested type T
+  implicit def objectReads[F[_], A](implicit r: XmlReads[A]): XmlReads[Option[A]] = XmlReads[Option[A]](x => r.reads(x) match {
+    case XmlSuccess(o) => XmlSuccess(Some(o))
+    case _: XmlError => XmlSuccess(None)
+  })
 }
