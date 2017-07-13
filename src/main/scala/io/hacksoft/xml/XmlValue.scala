@@ -120,6 +120,10 @@ case class XmlLiteral(value: String) extends XmlValue {
   override def \@?(name: String): Option[XmlAttribute] = throw new RuntimeException("""\@? on XmlLiteral""")
 }
 
+object XmlLiteral {
+  def apply(o: Any) = new XmlLiteral(o.toString)
+}
+
 case class XmlAttribute(
   label: String,
   value: String,

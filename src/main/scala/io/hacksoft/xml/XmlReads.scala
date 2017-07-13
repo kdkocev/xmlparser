@@ -11,20 +11,25 @@ object XmlReads {
 
   def toObject[T](xml: XmlValue)(implicit r: XmlReads[T]): XmlResult[T] = r.reads(xml)
 
-  private def simpleReads[T](message: String)(f: PartialFunction[XmlValue, T]): XmlReads[T] =
+  private def simpleReads[T](f: PartialFunction[XmlValue, T]): XmlReads[T] =
     XmlReads[T] {
       f.lift.andThen {
         case Some (x) => XmlSuccess(x)
-        case None => XmlError(s"XmlReads error $message")
+        case None => XmlError(s"XmlReads error")
       }
     }
 
-  implicit val booleanReads: XmlReads[Boolean] = simpleReads("boolean"){ case XmlLiteral(x) => x.toBoolean }
-  implicit val intReads: XmlReads[Int] = simpleReads("int"){ case XmlLiteral(x) => x.toInt }
-  implicit val stringReads: XmlReads[String] = simpleReads("string"){ case XmlLiteral(x) => x }
-  implicit val charReads: XmlReads[Char] = simpleReads("char"){ case XmlLiteral(x) => x.charAt(0) }
-  implicit val doubleReads: XmlReads[Double] = simpleReads("double"){ case XmlLiteral(x) => x.toDouble }
-  implicit val floatReads: XmlReads[Float] = simpleReads("float"){ case XmlLiteral(x) => x.toFloat }
+  private def simpleReadsConvert[T](f:  String => T) = simpleReads {
+    case XmlLiteral(x) => f(x)
+    case XmlObject(_, Seq(XmlLiteral(x)), _, _, _) => f(x)
+  }
+
+  implicit val booleanReads: XmlReads[Boolean] = simpleReadsConvert(_.toBoolean)
+  implicit val intReads: XmlReads[Int] = simpleReadsConvert(_.toInt)
+  implicit val stringReads: XmlReads[String] = simpleReadsConvert(_.toString)
+  implicit val charReads: XmlReads[Char] = simpleReadsConvert(_.charAt(0))
+  implicit val doubleReads: XmlReads[Double] = simpleReadsConvert(_.toDouble)
+  implicit val floatReads: XmlReads[Float] = simpleReadsConvert(_.toFloat)
   implicit def traversableReads[F[_], A](implicit cbf: CanBuildFrom[F[_], A, F[A]], r: XmlReads[A]): XmlReads[F[A]] = XmlReads[F[A]]{
     case x: XmlObject =>
       val builder = cbf()

@@ -67,12 +67,32 @@ class XmlReadsSpec extends Specification {
       case class Bar(baz: String)
 
       implicit val f: XmlReads[Bar] = XmlReads[Bar] {
-        case XmlObject("bar", Seq(XmlLiteral(x)), _, _, _) => XmlSuccess(Bar(x))
-        case _ => XmlError("Cannot be parsed to a Bar")
+        x => XmlSuccess(Bar((x \! "bar").as[String].get))
       }
 
       xmlValue.as[List[Bar]] must throwA[RuntimeException]
     }
 
+    "read T that has implicit XmlReads" in {
+      case class User(id: Int, name: String, isConfirmed: Boolean)
+      object User {
+        implicit val reads: XmlReads[User] = { x =>
+          XmlSuccess(User(
+            (x \! "id").as[Int].get,
+            (x \! "name").as[String].get,
+            (x \! "isConfirmed").as[Boolean].get
+          ))
+        }
+      }
+
+      XmlObject("user", Seq(
+        XmlObject("id", Seq(XmlLiteral(12))),
+        XmlObject("name", Seq(XmlLiteral("John"))),
+        XmlObject("isConfirmed", Seq(XmlLiteral("true")))
+      )).as[User] mustEqual XmlSuccess(User(12, "John", true))
+    }
+
+
+    // TODO: add Option reads
   }
 }
