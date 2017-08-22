@@ -96,7 +96,7 @@ class XmlReadsSpec extends Specification {
       XmlLiteral("Thing").as[Option[String]] mustEqual XmlSuccess(Some("Thing"))
     }
 
-    "read Option[T] in complex object" in {
+    "read Option[Int] in complex object" in {
       case class User(id: Option[Int], name: String)
       object User {
         implicit val reads: XmlReads[User] = x =>
@@ -112,6 +112,8 @@ class XmlReadsSpec extends Specification {
         XmlObject("name", Seq(XmlLiteral("John")))
       )).as[User] mustEqual XmlSuccess(User(None, "John"))
     }
+
+    "read Option[T] in complex object where T is custom type"
 
   }
 }
