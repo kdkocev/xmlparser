@@ -114,6 +114,20 @@ class XmlReadsSpec extends Specification {
     }
 
     "read Option[T] in complex object where T is custom type"
+  }
 
+  "XmlReads with XmlParser" should {
+    "read simple object from string" in {
+      case class User(id: Option[Int], name: String)
+      object User {
+        implicit val reads: XmlReads[User] = x =>
+          XmlSuccess(User((x \!? "id").flatMap(_.as[Option[Int]].get), (x \! "name").as[String].get))
+      }
+
+      val xml = "<user><id>12</id><name>John</name></user>"
+      val result = User(Some(12), "John")
+
+      XmlParser.parse(xml).as[User] mustEqual XmlSuccess(result)
+    }
   }
 }

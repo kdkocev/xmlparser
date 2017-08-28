@@ -18,7 +18,7 @@ class XmlParserSpec extends Specification {
       XmlParser.parse(xml) mustEqual xmlValue
     }
 
-    "parse namespaces" in {
+    "parse namespace" in {
       val xml = """<foo:a xmlns:foo="http://w.e">text</foo:a>"""
       val xmlValue = XmlObject(
         "a",
@@ -29,6 +29,27 @@ class XmlParserSpec extends Specification {
 
       XmlParser.parse(xml) mustEqual xmlValue
     }
+
+    "parse several namespaces" in {
+      val xml = """<foo:a xmlns:foo="http://w.e" xmlns:bar="http://ww.e">text</foo:a>"""
+
+      val xmlValue = XmlObject(
+        "a",
+        Seq(XmlLiteral("text")),
+        Seq(),
+        Some(Namespace("http://w.e", Some("foo"), Some(
+          Namespace("http://ww.e", Some("bar"))
+        )))
+      )
+
+      XmlParser.parse(xml) mustEqual xmlValue
+    }
+
+    "parse a namespace without prefix"
+
+    "parse a namespace without prefix with a prefixed namespace"
+
+    "parse a namespace without prefix on a prefixed element"
   }
 
   "getElementsList" should {
@@ -107,4 +128,5 @@ class XmlParserSpec extends Specification {
       )
     }
   }
+  // TODO: add tests that assert failure
 }

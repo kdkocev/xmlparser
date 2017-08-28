@@ -43,6 +43,7 @@ object XmlParser {
       case List(LiteralTag(value)) => XmlLiteral(value)
       case OpenTag(label, metadata) :: tail if tail.last == CloseTag(`label`)=>
         val realLabel = if(label.contains(':')) { label.dropWhile(_ != ':').drop(1) } else { label }
+        val labelPrefix = if(label.contains(':')) { Some(label.takeWhile(_ != ':')) } else { None }
         val children = separateChildren(tail.init)
           .map(x => getXmlValue(x))
           .filter{ // remove empty objects from children
@@ -61,9 +62,15 @@ object XmlParser {
             if(prefix.isEmpty) None else Some(prefix)
           )
         }
-        // TODO: add namespaces from OpenTag metadata and labels
-//        val namespace = namespaces.foldLeft()
-        XmlObject(realLabel, children, attributes, None) // TODO: add metadata
+        val (first, rest) = namespaces.partition(x => x.prefix == labelPrefix)
+        val namespace = {
+          val nsOrderedList = rest ++ first
+          nsOrderedList.headOption.map{ x =>
+            nsOrderedList.tail.foldLeft(x){(res, cur) => cur.copy(parent = Some(res))}
+          }
+        }
+
+        XmlObject(realLabel, children, attributes, namespace)
       case _ => throw new Exception(parsedElements + " cannot be parsed to xml")
     }
   }
