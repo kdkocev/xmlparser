@@ -139,4 +139,13 @@ object XmlAttribute {
     m.map{case (x,y) => XmlAttribute(x,y)}.toSeq
 }
 
+// XmlNull is used to represent an empty element the type of NodeSeq.Empty that can be removed from None option writes
+case object XmlNull extends XmlValue {
+  override def \(name: String): Seq[XmlValue] = throw new NoSuchElementException("no children on XmlNull")
+  override def \!(name: String): XmlValue = throw new NoSuchElementException("no children on XmlNull")
+  override def \!?(name: String): Option[XmlValue] = throw new NoSuchElementException("no children on XmlNull")
+  override def \@(name: String): XmlAttribute = throw new NoSuchElementException("no children on XmlNull")
+  override def \@?(name: String): Option[XmlAttribute] = throw new NoSuchElementException("no children on XmlNull")
+}
+
 case class Namespace(uri: String, prefix: Option[String] = None, parent: Option[Namespace] = None, visibleInNode: Boolean = true)

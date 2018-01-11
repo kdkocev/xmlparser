@@ -8,6 +8,8 @@ class XmlParserSpec extends Specification {
     "parse simple string" in {
       val xml = "<a><b>text</b></a>"
       val xmlValue = XmlObject("a", Seq(XmlObject("b", Seq(XmlLiteral("text")))))
+
+      xml.toString mustEqual xmlValue.toString
       XmlParser.parse(xml) mustEqual xmlValue
     }
 
@@ -15,6 +17,7 @@ class XmlParserSpec extends Specification {
       val xml = """<a foo="bar">text</a>"""
       val xmlValue = XmlObject("a", Seq(XmlLiteral("text")), Seq(XmlAttribute("foo", "bar")))
 
+      xml.toString mustEqual xmlValue.toString
       XmlParser.parse(xml) mustEqual xmlValue
     }
 
@@ -27,11 +30,12 @@ class XmlParserSpec extends Specification {
         Some(Namespace("http://w.e", Some("foo")))
       )
 
+      xml.toString mustEqual xmlValue.toString
       XmlParser.parse(xml) mustEqual xmlValue
     }
 
     "parse several namespaces" in {
-      val xml = """<foo:a xmlns:foo="http://w.e" xmlns:bar="http://ww.e">text</foo:a>"""
+      val xml = """<foo:a xmlns:bar="http://ww.e" xmlns:foo="http://w.e">text</foo:a>"""
 
       val xmlValue = XmlObject(
         "a",
@@ -42,14 +46,52 @@ class XmlParserSpec extends Specification {
         )))
       )
 
+      xml.toString mustEqual xmlValue.toString
       XmlParser.parse(xml) mustEqual xmlValue
     }
 
-    "parse a namespace without prefix"
+    "parse a namespace without prefix" in {
+      val xml = """<a xmlns="http://w.e">text</a>"""
+      val xmlValue = XmlObject(
+        "a",
+        Seq(XmlLiteral("text")),
+        Seq(),
+        Some(Namespace("http://w.e"))
+      )
 
-    "parse a namespace without prefix with a prefixed namespace"
+      xml.toString mustEqual xmlValue.toString
+      XmlParser.parse(xml) mustEqual xmlValue
+    }
 
-    "parse a namespace without prefix on a prefixed element"
+    "parse a namespace without prefix with a prefixed namespace" in {
+      val xml = """<a xmlns="http://w.e" xmlns:foo="http://ww.e">text</a>"""
+      val xmlValue = XmlObject(
+        "a",
+        Seq(XmlLiteral("text")),
+        Seq(),
+        Some(Namespace("http://w.e", None, Some(Namespace("http://ww.e", Some("foo")))))
+      )
+
+      xml.toString mustEqual xmlValue.toString
+      XmlParser.parse(xml) mustEqual xmlValue
+    }
+
+    "parse a namespace without prefix on a prefixed element"  in {
+      val xml = """<foo:a xmlns="http://w.e">text</foo:a>"""
+      val xmlValue = XmlObject(
+        "a",
+        Seq(XmlLiteral("text")),
+        Seq(),
+        Some(Namespace("", Some("foo"), Some(Namespace("http://w.e")), false))
+      )
+
+      XmlParser.parse(xml).toString mustEqual xml
+      xml.toString mustEqual xmlValue.toString
+      XmlParser.parse(xml) mustEqual xmlValue
+    }
+
+    // parents should give children their namespaces without prefixes
+    "parse namespaces parents to children"
   }
 
   "getElementsList" should {
@@ -128,5 +170,6 @@ class XmlParserSpec extends Specification {
       )
     }
   }
+
   // TODO: add tests that assert failure
 }

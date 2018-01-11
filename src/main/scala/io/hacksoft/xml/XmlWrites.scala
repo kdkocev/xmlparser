@@ -21,5 +21,10 @@ object XmlWrites {
   implicit def traversableWrites[T](implicit w: XmlWrites[T], s: XmlSettings[T] = XmlSettings.default): XmlWrites[Traversable[T]] = {x =>
     XmlObject(s.listName, x.map(w.writes).toSeq)
   }
+
+  implicit def optionWrites[T](implicit w: XmlWrites[T]): XmlWrites[Option[T]] = {
+    case Some(y: T) => w.writes(y)
+    case _ => XmlNull
+  }
 }
 

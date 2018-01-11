@@ -96,6 +96,22 @@ class XmlWritesSpec extends Specification {
     }
 
     // TODO: add option writes
+
+    "write Option[T]" in {
+      case class User(id: Option[Int], name: String)
+      implicit val writes: XmlWrites[User] = XmlWrites[User] { x =>
+        XmlObject("user", children = List(XML.write(x.id), XML.write(x.name)).filter(_ != XmlNull))
+      }
+
+      val o1 = User(None, "John")
+      val o2 = User(Some(1), "Snow")
+
+      val xmlVal1 = XmlObject("user", Seq(XmlObject("name", children = Seq(XmlLiteral("John")))))
+      val xmlVal2 = XmlObject("user", Seq(XmlObject("id", children = Seq(XmlLiteral(1))), XmlObject("name", children = Seq(XmlLiteral("Snow")))))
+
+      toXml(o1) mustEqual xmlVal1
+      toXml(o2) mustEqual xmlVal2
+    }
   }
 
   "XmlWrites with XmlParser" should {

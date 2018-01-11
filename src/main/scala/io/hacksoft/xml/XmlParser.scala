@@ -9,13 +9,14 @@ object XmlParser {
   def parse(xmlString: String): XmlValue = {
     // separate all elements to a list
     // classify elements: start/end/startAndEnd
-    // TODO: validate elements are oppened and closed in the proper way
+    // TODO: validate elements are opened and closed in the proper way
     // build the actual xml
+
     val elements = getElementsList(xmlString)
     val parsedElements = getParsedElements(elements)
 
 
-    getXmlValue(parsedElements)
+    getXmlValue(parsedElements, Nil)
   }
 
   private[xml] def separateChildren(el: List[ParsedElement]): List[List[ParsedElement]] =
@@ -37,38 +38,58 @@ object XmlParser {
     }
 
   // private to the package so it can be tested
-  private[xml] def getXmlValue(parsedElements: List[ParsedElement]): XmlValue = {
+  private[xml] def getXmlValue(parsedElements: List[ParsedElement], parentNamespaces: List[Namespace]): XmlValue = {
     parsedElements match {
       case Nil => XmlLiteral("")
       case List(LiteralTag(value)) => XmlLiteral(value)
-      case OpenTag(label, metadata) :: tail if tail.last == CloseTag(`label`)=>
-        val realLabel = if(label.contains(':')) { label.dropWhile(_ != ':').drop(1) } else { label }
-        val labelPrefix = if(label.contains(':')) { Some(label.takeWhile(_ != ':')) } else { None }
-        val children = separateChildren(tail.init)
-          .map(x => getXmlValue(x))
-          .filter{ // remove empty objects from children
-            case XmlLiteral("") => false
-            case _ => true
-          }
-        val (attrsStrings, nsStrings) = metadata.partition{
+      case OpenTag(label, metadata) :: tail if tail.last == CloseTag(`label`) =>
+        val realLabel = if (label.contains(':')) {
+          label.dropWhile(_ != ':').drop(1)
+        } else {
+          label
+        }
+        val labelPrefix = if (label.contains(':')) {
+          Some(label.takeWhile(_ != ':'))
+        } else {
+          None
+        }
+        val (attrsStrings, nsStrings) = metadata.partition {
           case (k, _) if !k.startsWith("xmlns") => true
           case _ => false
         }
-        val attributes = attrsStrings.map{case (k, v) => XmlAttribute(k, v)}
-        val namespaces = nsStrings.map{ case (k, v) =>
+        val attributes = attrsStrings.map { case (k, v) => XmlAttribute(k, v) }
+        val namespaces = nsStrings.map { case (k, v) =>
           val prefix = k.dropWhile(_ != ':').drop(1)
           Namespace(
             v,
-            if(prefix.isEmpty) None else Some(prefix)
+            if (prefix.isEmpty) None else Some(prefix)
           )
         }
-        val (first, rest) = namespaces.partition(x => x.prefix == labelPrefix)
+
+        // Filter out parent namespaces and add them at the end
+        val newNamespaces = namespaces.filter (!parentNamespaces.contains (_))
+
+        val (first, rest) = newNamespaces.partition(x => x.prefix == labelPrefix)
+
+        val nsOrderedList = parentNamespaces ++ rest ++ first
+        // TODO: extract namespace calculating into a method
         val namespace = {
-          val nsOrderedList = rest ++ first
-          nsOrderedList.headOption.map{ x =>
+          val res = nsOrderedList.headOption.map{ x =>
             nsOrderedList.tail.foldLeft(x){(res, cur) => cur.copy(parent = Some(res))}
           }
+
+          // Corner case - if the element has a prefix and the namespace doesn't
+          if(labelPrefix.isDefined && res.isDefined && res.get.prefix.isEmpty) {
+            Some(Namespace("", labelPrefix, res, false))
+          } else res
         }
+
+        val children = separateChildren(tail.init)
+          .map(x => getXmlValue(x, nsOrderedList))
+          .filter { // remove empty objects from children
+            case XmlLiteral("") => false
+            case _ => true
+          }
 
         XmlObject(realLabel, children, attributes, namespace)
       case _ => throw new Exception(parsedElements + " cannot be parsed to xml")
