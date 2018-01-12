@@ -117,10 +117,12 @@ class XmlWritesSpec extends Specification {
   "XmlWrites with XmlParser" should {
     "write a Word() to xml string" in {
       case class Word(word: String)
-      implicit val writes: XmlWrites[Word] = x => XmlObject("word", Seq(XmlLiteral(x.word)))
+      object Word {
+        implicit val writes: XmlWrites[Word] = x => XmlObject("word", Seq(XmlLiteral(x.word)))
+      }
 
       val obj = Word("Hello!")
-      writes.writes(obj).toString mustEqual "<word>Hello!</word>"
+      XML.write(obj).toString mustEqual "<word>Hello!</word>"
     }
   }
 }

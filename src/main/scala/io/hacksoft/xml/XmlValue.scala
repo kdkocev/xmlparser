@@ -20,7 +20,7 @@ case class XmlObject(
   minimiseEmpty: Boolean = false
 ) extends XmlValue {
 
-  override def \ (name: String): Seq[XmlValue] = children.filter{
+  override def \ (name: String): Seq[XmlValue] = children.filter {
     case x: XmlObject if x.label == name => true
     case _ => false
   }

@@ -1,7 +1,5 @@
 package io.hacksoft.xml
 
-import reflect.runtime.universe._
-
 case class listElementName(name: String) extends scala.annotation.StaticAnnotation
 
 // Contravariant because of `traversableReads`
